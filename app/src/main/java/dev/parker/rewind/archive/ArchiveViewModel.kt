@@ -2,6 +2,7 @@ package dev.parker.rewind.archive
 
 import android.app.Application
 import android.content.Context
+import android.net.Uri
 import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,7 +21,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
-import org.json.JSONObject
 import java.io.File
 
 data class SavedItem(val identifier: String, val title: String, val mediatype: String?)
@@ -201,18 +201,54 @@ class ArchiveViewModel(app: Application) : AndroidViewModel(app) {
         Downloads.jobFor(id)?.let(onQueued)
     }
 
-    private fun loadSaved(): List<SavedItem> = runCatching {
-        val arr = JSONArray(prefs.getString(KEY_ITEMS, "[]"))
-        (0 until arr.length()).map { i ->
-            val o = arr.getJSONObject(i)
-            SavedItem(o.getString("id"), o.optString("title", o.getString("id")), o.optString("mediatype").ifEmpty { null })
+    /** Write the saved list to [uri] (from a CreateDocument picker). */
+    fun exportTo(uri: Uri) {
+        val items = _saved.value
+        viewModelScope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    getApplication<Application>().contentResolver.openOutputStream(uri, "wt")!!.use {
+                        it.write(SavedItemsFile.export(items).toByteArray())
+                    }
+                }
+            }
+            _messages.send(result.fold({ "Exported ${items.size} items" }, { "Export failed: ${it.message}" }))
         }
+    }
+
+    /** Merge items from [uri] into the saved list: existing ones stay put, new ones go after them. */
+    fun importFrom(uri: Uri) {
+        viewModelScope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    val text = getApplication<Application>().contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() }
+                    SavedItemsFile.parse(text)
+                }
+            }
+            val message = result.fold(
+                onSuccess = { incoming ->
+                    val known = _saved.value.map { it.identifier }.toSet()
+                    val added = incoming.filterNot { it.identifier in known }
+                    _saved.value = _saved.value + added
+                    persist()
+                    when {
+                        added.isEmpty() -> "Nothing new: all ${incoming.size} items were already in the list"
+                        added.size == incoming.size -> "Imported ${added.size} items"
+                        else -> "Imported ${added.size} new items (${incoming.size - added.size} already in the list)"
+                    }
+                },
+                onFailure = { "Import failed: ${it.message}" },
+            )
+            _messages.send(message)
+        }
+    }
+
+    private fun loadSaved(): List<SavedItem> = runCatching {
+        SavedItemsFile.decodeArray(JSONArray(prefs.getString(KEY_ITEMS, "[]")))
     }.getOrDefault(emptyList())
 
     private fun persist() {
-        val arr = JSONArray()
-        _saved.value.forEach { arr.put(JSONObject().put("id", it.identifier).put("title", it.title).put("mediatype", it.mediatype)) }
-        prefs.edit { putString(KEY_ITEMS, arr.toString()) }
+        prefs.edit { putString(KEY_ITEMS, SavedItemsFile.encodeArray(_saved.value).toString()) }
     }
 
     companion object {

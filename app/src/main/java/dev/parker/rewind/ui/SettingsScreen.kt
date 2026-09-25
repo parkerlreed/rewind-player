@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Audiotrack
@@ -37,13 +39,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import dev.parker.rewind.AppSettings
+import dev.parker.rewind.archive.ArchiveViewModel
 import dev.parker.rewind.BuildConfig
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(settings: AppSettings) {
+fun SettingsScreen(settings: AppSettings, archiveVm: ArchiveViewModel) {
+    val saved by archiveVm.saved.collectAsStateWithLifecycle()
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri?.let(archiveVm::exportTo)
+    }
+    // Accept anything: exports are JSON, but hand-made URL lists may be .txt and some pickers mislabel types.
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(archiveVm::importFrom)
+    }
     val root by settings.downloadRoot.collectAsStateWithLifecycle()
     val showHidden by settings.showHidden.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf(false) }
@@ -76,6 +89,23 @@ fun SettingsScreen(settings: AppSettings) {
                         } else null,
                     )
                 }
+                SectionHeader("Archive items")
+                ListItem(
+                    modifier = Modifier.clickable(enabled = saved.isNotEmpty()) { exportLauncher.launch("rewind-archive-items.json") },
+                    leadingContent = { Icon(Icons.Outlined.FileUpload, null) },
+                    headlineContent = { Text("Export list") },
+                    supportingContent = {
+                        Text(if (saved.isEmpty()) "No saved items yet" else "Save your ${saved.size} items to a file")
+                    },
+                )
+                ListItem(
+                    modifier = Modifier.clickable { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                    leadingContent = { Icon(Icons.Outlined.FileDownload, null) },
+                    headlineContent = { Text("Import list") },
+                    supportingContent = {
+                        Text("Adds items from a Rewind export, or a text file with one archive.org URL per line. Existing items are kept.")
+                    },
+                )
                 SectionHeader("Browser")
                 ListItem(
                     modifier = Modifier.clickable { settings.setShowHidden(!showHidden) },

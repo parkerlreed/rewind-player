@@ -138,7 +138,7 @@ fun App(vm: MainViewModel, archiveVm: ArchiveViewModel) {
                     onStreamUrl = { uri, name -> if (!launchPlayer(context, uri, name)) vm.message("No app can open $name") },
                 )
                 Destination.Downloads -> DownloadsScreen(onStream = stream)
-                Destination.Settings -> SettingsScreen(vm.settings)
+                Destination.Settings -> SettingsScreen(vm.settings, archiveVm)
             }
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp))
