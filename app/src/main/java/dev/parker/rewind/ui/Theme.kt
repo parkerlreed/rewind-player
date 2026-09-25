@@ -7,7 +7,18 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
@@ -37,6 +48,27 @@ private val Dark = darkColorScheme(
     tertiaryContainer = Color(0xFF334863),
     onTertiaryContainer = Color(0xFFD3E4FF),
 )
+
+/**
+ * One solid, full-width strip behind the status bar. Nothing scrolls under it and scroll-tinted top
+ * bars stop below it, so the status bar never shows content or a half-tinted colour. The navigation
+ * bar is left edge-to-edge on purpose.
+ */
+@Composable
+fun SolidStatusBar(content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
+        Spacer(
+            Modifier
+                .fillMaxWidth()
+                .windowInsetsTopHeight(WindowInsets.statusBars)
+                .background(MaterialTheme.colorScheme.surface)
+        )
+        // Descendants (top bars, Scaffolds, detail panes) see the status bar inset as already handled.
+        Box(Modifier.weight(1f).fillMaxWidth().consumeWindowInsets(WindowInsets.statusBars)) {
+            content()
+        }
+    }
+}
 
 @Composable
 fun RewindTheme(content: @Composable () -> Unit) {

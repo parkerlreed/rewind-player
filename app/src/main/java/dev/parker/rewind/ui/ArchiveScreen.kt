@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Audiotrack
@@ -54,6 +56,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
@@ -103,6 +107,7 @@ import dev.parker.rewind.archive.ArchiveViewModel
 import dev.parker.rewind.archive.FileSource
 import dev.parker.rewind.archive.OpenItem
 import dev.parker.rewind.archive.SavedItem
+import dev.parker.rewind.archive.SavedSort
 import dev.parker.rewind.engine.DownloadJob
 import dev.parker.rewind.engine.Downloads
 import dev.parker.rewind.torrent.TorrentNode
@@ -183,13 +188,28 @@ fun ArchiveScreen(vm: ArchiveViewModel, onStream: (DownloadJob) -> Unit, onStrea
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SavedItemsList(vm: ArchiveViewModel) {
-    val saved by vm.saved.collectAsStateWithLifecycle()
+    val items by vm.saved.collectAsStateWithLifecycle()
+    val sort by vm.sort.collectAsStateWithLifecycle()
+    val saved = remember(items, sort) { vm.sorted(items, sort) }
+    val listState = rememberLazyListState()
+    // Rows are keyed, so a re-sort would otherwise keep the old first-visible item in view and leave
+    // you partway down. Jump to the top on every sort change (but not on first composition).
+    var sortedFor by remember { mutableStateOf(sort) }
+    LaunchedEffect(sort) {
+        if (sort != sortedFor) {
+            listState.scrollToItem(0)
+            sortedFor = sort
+        }
+    }
     val loading by vm.loading.collectAsStateWithLifecycle()
     var adding by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf<SavedItem?>(null) }
 
+    // Same scroll-tinted top bar as the other lists.
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Archive") }) },
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = { TopAppBar(title = { Text("Archive") }, actions = { SortMenu(vm) }, scrollBehavior = scrollBehavior) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { adding = true },
@@ -208,6 +228,7 @@ private fun SavedItemsList(vm: ArchiveViewModel) {
             )
         } else {
             LazyColumn(
+                state = listState,
                 contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = 96.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
@@ -239,6 +260,24 @@ private fun SavedItemsList(vm: ArchiveViewModel) {
             confirmButton = { TextButton(onClick = { vm.remove(item.identifier); confirmRemove = null }) { Text("Remove") } },
             dismissButton = { TextButton(onClick = { confirmRemove = null }) { Text("Cancel") } },
         )
+    }
+}
+
+@Composable
+private fun SortMenu(vm: ArchiveViewModel) {
+    val sort by vm.sort.collectAsStateWithLifecycle()
+    var open by remember { mutableStateOf(false) }
+    IconButton(onClick = { open = true }) { Icon(Icons.AutoMirrored.Outlined.Sort, contentDescription = "Sort") }
+    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        SavedSort.entries.forEach { option ->
+            DropdownMenuItem(
+                text = { Text(option.label) },
+                onClick = { vm.setSort(option); open = false },
+                trailingIcon = if (option == sort) {
+                    { Icon(Icons.Outlined.Check, contentDescription = "Selected") }
+                } else null,
+            )
+        }
     }
 }
 

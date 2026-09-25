@@ -25,6 +25,12 @@ import java.io.File
 
 data class SavedItem(val identifier: String, val title: String, val mediatype: String?)
 
+enum class SavedSort(val label: String) {
+    Recent("Recently opened"),
+    Title("Title"),
+    Identifier("Identifier"),
+}
+
 /** An open item and the folder inside it being shown. */
 data class OpenItem(val item: ArchiveItem, val path: List<String> = emptyList())
 
@@ -32,8 +38,29 @@ class ArchiveViewModel(app: Application) : AndroidViewModel(app) {
     private val prefs = app.getSharedPreferences("archive", Context.MODE_PRIVATE)
     val settings = AppSettings.get(app)
 
+    /** Stored most-recently-opened first; that order is the "Recent" sort. Sort with [sorted]. */
     private val _saved = MutableStateFlow(loadSaved())
     val saved: StateFlow<List<SavedItem>> = _saved.asStateFlow()
+
+    private val _sort = MutableStateFlow(
+        SavedSort.entries.firstOrNull { it.name == prefs.getString(KEY_SORT, null) } ?: SavedSort.Recent
+    )
+    val sort: StateFlow<SavedSort> = _sort.asStateFlow()
+
+    /**
+     * Sorting is done by the caller in composition rather than in a flow, so a new sort and the
+     * reordered list land in the same frame (the list can then reliably jump to the top).
+     */
+    fun sorted(items: List<SavedItem>, sort: SavedSort): List<SavedItem> = when (sort) {
+        SavedSort.Recent -> items
+        SavedSort.Title -> items.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, SavedItem::title).thenBy { it.identifier })
+        SavedSort.Identifier -> items.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, SavedItem::identifier))
+    }
+
+    fun setSort(sort: SavedSort) {
+        prefs.edit { putString(KEY_SORT, sort.name) }
+        _sort.value = sort
+    }
 
     private val _open = MutableStateFlow<OpenItem?>(null)
     val open: StateFlow<OpenItem?> = _open.asStateFlow()
@@ -190,6 +217,7 @@ class ArchiveViewModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
         private const val KEY_ITEMS = "items"
+        private const val KEY_SORT = "saved_sort"
         private const val KEY_SHOW = "show_sources"
     }
 }

@@ -9,6 +9,7 @@ import androidx.activity.viewModels
 import dev.parker.rewind.archive.ArchiveViewModel
 import dev.parker.rewind.ui.App
 import dev.parker.rewind.ui.RewindTheme
+import dev.parker.rewind.ui.SolidStatusBar
 
 class MainActivity : ComponentActivity() {
     private val vm: MainViewModel by viewModels()
@@ -19,7 +20,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         if (savedInstanceState == null) handleIntent(intent)
         setContent {
-            RewindTheme { App(vm, archiveVm) }
+            RewindTheme { SolidStatusBar { App(vm, archiveVm) } }
         }
     }
 
