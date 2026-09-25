@@ -41,11 +41,16 @@ just the file you want.
 ## Install
 
 Rewind isn't on the Play Store; it uses all-files access (`MANAGE_EXTERNAL_STORAGE`) to browse
-storage and write downloads. Build it (see below), then:
+storage and write downloads. Download the signed APK from
+[Releases](https://github.com/parkerlreed/rewind-player/releases) and open it on the device, or:
 
 ```sh
-adb install -r app-debug.apk
+adb install -r Rewind-0.1.0.apk
 ```
+
+Release APKs and your own debug builds are signed with different keys, so one can't update over
+the other. Uninstall first when switching; export your Archive list in Settings beforehand and
+import it afterwards.
 
 On first launch Rewind sends you to the *All files access* settings screen. If your device
 doesn't have that screen (for example some headsets), grant it over adb:
@@ -62,6 +67,7 @@ Needs the Android SDK (compileSdk 37) and a full JDK 17+ with `javac`; a JRE isn
 
 ```sh
 ./gradlew assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleRelease      # signed if RELEASE_* signing properties are set, otherwise unsigned
 ./gradlew testDebugUnitTest    # bencode/torrent and archive.org parser tests
 ```
 

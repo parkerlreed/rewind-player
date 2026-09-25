@@ -16,14 +16,27 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+        // Only the ABIs libtorrent4j ships natives for; an x86 device would otherwise pick lib/x86 and crash.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
+    }
+    // Shared release key, configured in ~/.gradle/gradle.properties. Without it, release builds are unsigned.
+    val releaseStoreFile = providers.gradleProperty("RELEASE_STORE_FILE").orNull
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = providers.gradleProperty("RELEASE_STORE_PASSWORD").orNull
+                keyAlias = providers.gradleProperty("RELEASE_KEY_ALIAS").orNull
+                keyPassword = providers.gradleProperty("RELEASE_KEY_PASSWORD").orNull
+            }
+        }
     }
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Not going on Play; sign with the debug key so release builds install directly.
-            signingConfig = signingConfigs.getByName("debug")
+            if (releaseStoreFile != null) signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
