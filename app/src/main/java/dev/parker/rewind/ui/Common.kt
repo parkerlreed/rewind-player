@@ -9,6 +9,18 @@ import android.content.Intent
 import android.net.Uri
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -79,6 +91,36 @@ fun formatSize(bytes: Long): String = Formatter.formatShortFileSize(LocalContext
 fun rememberSizeFormatter(): (Long) -> String {
     val context = LocalContext.current
     return remember(context) { { bytes: Long -> Formatter.formatShortFileSize(context, bytes) } }
+}
+
+/**
+ * Scrolling, centred column for detail panes. No app bar: content starts right below the status
+ * bar. On single-pane layouts a back button is the first row and scrolls away with the content.
+ */
+@Composable
+fun DetailColumn(showBack: Boolean, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 560.dp)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            if (showBack) {
+                Box(Modifier.fillMaxWidth()) {
+                    // Pull the icon's touch padding into the gutter so the arrow lines up with the content edge.
+                    IconButton(onClick = onBack, modifier = Modifier.offset(x = (-12).dp)) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            }
+            content()
+        }
+    }
 }
 
 /** Tinted circular icon used as the leading element of list rows and headers. */

@@ -2,6 +2,9 @@ package dev.parker.rewind.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,7 +16,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FolderZip
@@ -24,18 +26,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -54,7 +52,6 @@ import dev.parker.rewind.engine.DownloadJob
 import dev.parker.rewind.engine.TorrentEngine
 import dev.parker.rewind.torrent.TorrentNode
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileDetailPane(
     vm: MainViewModel,
@@ -71,66 +68,43 @@ fun FileDetailPane(
     val target = remember(selection, downloadRoot) { job?.target ?: vm.targetFor(selection) }
     val fmt = rememberSizeFormatter()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
-                    if (showBack) {
-                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
-            Column(
-                modifier = Modifier
-                    .widthIn(max = 560.dp)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                IconBadge(
-                    kind.icon, size = 88.dp,
-                    container = MaterialTheme.colorScheme.primaryContainer,
-                    content = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                Text(node.name, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-                Text(
-                    "${fmt(node.size)} · ${kind.name.lowercase()}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+    DetailColumn(showBack = showBack, onBack = onBack) {
+        IconBadge(
+            kind.icon, size = 88.dp,
+            container = MaterialTheme.colorScheme.primaryContainer,
+            content = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        Text(node.name, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+        Text(
+            "${fmt(node.size)} · ${kind.name.lowercase()}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
 
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    InfoRow(Icons.Outlined.FolderZip, "In torrent",
-                        (listOf(selection.meta.name) + node.path.dropLast(1)).joinToString(" / "))
-                    InfoRow(Icons.Outlined.Download, "Saves to", target.absolutePath, mono = true)
-                }
-
-                if (job != null) JobProgressCard(job, fmt)
-
-                Actions(
-                    job = job,
-                    streamable = kind.streamable,
-                    onDownload = { vm.download(selection, stream = false) },
-                    onStream = {
-                        if (job != null) onStream(job) else vm.download(selection, stream = true, onQueued = onStream)
-                    },
-                    onCancel = { Downloads.cancel(selection.jobId) },
-                    onRetry = {
-                        Downloads.cancel(selection.jobId)
-                        vm.download(selection, stream = job?.streaming == true)
-                    },
-                )
-            }
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            InfoRow(Icons.Outlined.FolderZip, "In torrent",
+                (listOf(selection.meta.name) + node.path.dropLast(1)).joinToString(" / "))
+            InfoRow(Icons.Outlined.Download, "Saves to", target.absolutePath, mono = true)
         }
+
+        if (job != null) JobProgressCard(job, fmt)
+
+        Actions(
+            job = job,
+            streamable = kind.streamable,
+            onDownload = { vm.download(selection, stream = false) },
+            onStream = {
+                if (job != null) onStream(job) else vm.download(selection, stream = true, onQueued = onStream)
+            },
+            onCancel = { Downloads.cancel(selection.jobId) },
+            onRetry = {
+                Downloads.cancel(selection.jobId)
+                vm.download(selection, stream = job?.streaming == true)
+            },
+        )
     }
 }
 
@@ -268,7 +242,8 @@ fun TorrentSummaryPane(loc: Location.Torrent, onSelect: (TorrentNode.File) -> Un
     }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
-            Modifier.widthIn(max = 560.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
+            Modifier.widthIn(max = 560.dp).fillMaxWidth().verticalScroll(rememberScrollState())
+                .windowInsetsPadding(WindowInsets.statusBars).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("Largest files", style = MaterialTheme.typography.titleMedium)

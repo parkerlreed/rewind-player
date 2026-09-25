@@ -7,6 +7,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -451,7 +454,8 @@ private fun ItemSummary(vm: ArchiveViewModel, item: ArchiveItem, onSelect: (Arch
     }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
-            Modifier.widthIn(max = 560.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
+            Modifier.widthIn(max = 560.dp).fillMaxWidth().verticalScroll(rememberScrollState())
+                .windowInsetsPadding(WindowInsets.statusBars).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("Largest files", style = MaterialTheme.typography.titleMedium)
@@ -500,68 +504,50 @@ private fun ArchiveFileDetail(
     val fmt = rememberSizeFormatter()
     val name = file.path.last()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
-                    if (showBack) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                },
+    DetailColumn(showBack = showBack, onBack = onBack) {
+        IconBadge(
+            kind.icon, size = 88.dp,
+            container = MaterialTheme.colorScheme.primaryContainer,
+            content = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        Text(name, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+        Text(
+            listOfNotNull(fmt(file.size), file.format, file.lengthSeconds?.let(::formatDuration)).joinToString(" · "),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            InfoRow(Icons.Outlined.AccountBalance, "In item", (listOf(item.title) + file.path.dropLast(1)).joinToString(" / "))
+            InfoRow(Icons.Outlined.Inventory2, "Source", file.source ?: "unknown")
+            InfoRow(Icons.Outlined.Download, if (onDevice) "Already on this device" else "Saves to", target.absolutePath, mono = true)
+            file.md5?.let { InfoRow(Icons.Outlined.Fingerprint, "MD5", it, mono = true) }
+        }
+
+        if (job != null) JobProgressCard(job, fmt)
+
+        if (file.private) {
+            Text(
+                "This file is private on archive.org and needs a login to download.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
             )
-        },
-    ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
-            Column(
-                modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth().verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                IconBadge(
-                    kind.icon, size = 88.dp,
-                    container = MaterialTheme.colorScheme.primaryContainer,
-                    content = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                Text(name, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-                Text(
-                    listOfNotNull(fmt(file.size), file.format, file.lengthSeconds?.let(::formatDuration)).joinToString(" · "),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    InfoRow(Icons.Outlined.AccountBalance, "In item", (listOf(item.title) + file.path.dropLast(1)).joinToString(" / "))
-                    InfoRow(Icons.Outlined.Inventory2, "Source", file.source ?: "unknown")
-                    InfoRow(Icons.Outlined.Download, if (onDevice) "Already on this device" else "Saves to", target.absolutePath, mono = true)
-                    file.md5?.let { InfoRow(Icons.Outlined.Fingerprint, "MD5", it, mono = true) }
-                }
-
-                if (job != null) JobProgressCard(job, fmt)
-
-                if (file.private) {
-                    Text(
-                        "This file is private on archive.org and needs a login to download.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                } else {
-                    ArchiveActions(
-                        job = job,
-                        onDevice = onDevice,
-                        streamable = kind.streamable,
-                        onDownload = { vm.download(item, file, stream = false) },
-                        onDownloadAndStream = { vm.download(item, file, stream = true, onQueued = onStream) },
-                        onStreamOnly = { onStreamUrl(Uri.parse(item.downloadUrl(file)), name) },
-                        onOpenLocal = { if (!openLocal(context, target)) vm.message("No app can open $name") },
-                        onStreamJob = { job?.let(onStream) },
-                        onCancel = { job?.let { Downloads.cancel(it.id) } },
-                        onRetry = { vm.download(item, file, stream = job?.streaming == true) },
-                    )
-                }
-            }
+        } else {
+            ArchiveActions(
+                job = job,
+                onDevice = onDevice,
+                streamable = kind.streamable,
+                onDownload = { vm.download(item, file, stream = false) },
+                onDownloadAndStream = { vm.download(item, file, stream = true, onQueued = onStream) },
+                onStreamOnly = { onStreamUrl(Uri.parse(item.downloadUrl(file)), name) },
+                onOpenLocal = { if (!openLocal(context, target)) vm.message("No app can open $name") },
+                onStreamJob = { job?.let(onStream) },
+                onCancel = { job?.let { Downloads.cancel(it.id) } },
+                onRetry = { vm.download(item, file, stream = job?.streaming == true) },
+            )
         }
     }
 }
