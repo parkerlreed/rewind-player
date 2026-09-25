@@ -1,0 +1,15 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.kotlin/
+*.apk
+
+# Personal files that end up in the project root while testing
+/*.mp4
+/*.mkv
+/*.jpg
+/*.png
+/*.torrent
+/archive.xml

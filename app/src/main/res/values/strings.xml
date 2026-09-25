@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rewind</string>
+    <string name="channel_downloads">Downloads</string>
+    <string name="notif_downloading_n">Downloading %d files</string>
+    <string name="notif_streaming_n">Streaming %d files</string>
+    <string name="notif_stream_ready">Stream server running</string>
+    <string name="action_stop_all">Stop all</string>
+    <string name="share_add_archive">Add to Rewind</string>
+</resources>
