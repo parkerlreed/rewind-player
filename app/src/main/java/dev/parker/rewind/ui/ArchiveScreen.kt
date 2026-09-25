@@ -468,11 +468,11 @@ private fun ItemBreadcrumbs(vm: ArchiveViewModel, open: OpenItem) {
 private fun ItemHeader(item: ArchiveItem) {
     val scheme = MaterialTheme.colorScheme
     Card(
-        colors = CardDefaults.cardColors(containerColor = scheme.tertiaryContainer, contentColor = scheme.onTertiaryContainer),
+        colors = CardDefaults.cardColors(containerColor = scheme.secondaryContainer, contentColor = scheme.onSecondaryContainer),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(mediatypeIcon(item.mediatype), container = scheme.tertiary, content = scheme.onTertiary)
+            IconBadge(mediatypeIcon(item.mediatype), container = scheme.secondary, content = scheme.onSecondary)
             Column(Modifier.padding(start = 16.dp)) {
                 Text(item.title, style = MaterialTheme.typography.titleMedium)
                 val by = listOfNotNull(item.creator, item.date).joinToString(" · ")

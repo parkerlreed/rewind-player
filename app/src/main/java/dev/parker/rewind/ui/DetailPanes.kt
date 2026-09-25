@@ -213,11 +213,11 @@ internal fun InfoRow(icon: ImageVector, label: String, value: String, mono: Bool
 fun TorrentHeader(loc: Location.Torrent) {
     val scheme = MaterialTheme.colorScheme
     Card(
-        colors = CardDefaults.cardColors(containerColor = scheme.tertiaryContainer, contentColor = scheme.onTertiaryContainer),
+        colors = CardDefaults.cardColors(containerColor = scheme.secondaryContainer, contentColor = scheme.onSecondaryContainer),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(Icons.Outlined.FolderZip, container = scheme.tertiary, content = scheme.onTertiary)
+            IconBadge(Icons.Outlined.FolderZip, container = scheme.secondary, content = scheme.onSecondary)
             Column(Modifier.padding(start = 16.dp)) {
                 Text(loc.meta.name, style = MaterialTheme.typography.titleMedium)
                 Text(

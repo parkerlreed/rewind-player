@@ -261,7 +261,7 @@ private fun EntryRow(entry: BrowserEntry, selected: Boolean, job: DownloadJob?, 
         supportingContent = supporting?.let { s -> { Text(job?.statusLine(fmt) ?: s, maxLines = 1) } },
         leadingContent = {
             if (entry is BrowserEntry.FsTorrent) {
-                IconBadge(icon, container = scheme.tertiaryContainer, content = scheme.onTertiaryContainer)
+                IconBadge(icon, container = scheme.secondary, content = scheme.onSecondary)
             } else {
                 IconBadge(icon)
             }
